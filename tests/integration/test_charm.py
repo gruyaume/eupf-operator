@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2024 Guillaume
+# Copyright 2024 Guillaume Belanger
 # See LICENSE file for licensing details.
 
 import asyncio
