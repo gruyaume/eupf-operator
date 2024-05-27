@@ -22,11 +22,11 @@ body:
     attributes:
       label: To Reproduce
       description: >
-        Please provide a step-by-step instruction of how to reproduce the behavior. Make sure to include
-        Terraform files, Juju commands, and any other relevant information.
+        Please provide a step-by-step instruction of how to reproduce the behavior.
       placeholder: |
-        1. `terraform init`
-        2. `terraform apply -auto-approve`
+        1. `juju deploy ...`
+        2. `juju relate ...`
+        3. `juju status --relations`
     validations:
       required: true
   - type: textarea
