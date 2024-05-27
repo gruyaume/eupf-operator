@@ -9,6 +9,7 @@ import logging
 
 import ops
 import yaml
+from charms.operator_libs_linux.v2.snap import SnapCache, SnapError, SnapState
 from jinja2 import Environment, FileSystemLoader
 from machine import Machine
 from ops import (
@@ -18,8 +19,10 @@ from ops import (
     WaitingStatus,
 )
 
-UPF_CONFIG_FILE_NAME = "config.yaml"
-UPF_CONFIG_PATH = "/var/snap/eupf/common"
+EUPF_SNAP_NAME = "eupf"
+EUPF_SNAP_CHANNEL = "edge"
+EUPF_CONFIG_FILE_NAME = "config.yaml"
+EUPF_CONFIG_PATH = "/var/snap/eupf/common"
 PFCP_ADDRESS = "127.0.0.1:8805"
 N3_ADDRESS = "127.0.0.1"
 INTERFACE_NAME = "lo"
@@ -39,7 +42,7 @@ def render_upf_config_file(
         interface_name: The interface name.
     """
     jinja2_environment = Environment(loader=FileSystemLoader("src/templates/"))
-    template = jinja2_environment.get_template(f"{UPF_CONFIG_FILE_NAME}.j2")
+    template = jinja2_environment.get_template(f"{EUPF_CONFIG_FILE_NAME}.j2")
     content = template.render(
         pfcp_address=pfcp_address,
         n3_address=n3_address,
@@ -58,7 +61,10 @@ class EupfOperatorCharm(ops.CharmBase):
         self.framework.observe(self.on.config_changed, self._configure)
 
     def _on_collect_status(self, event: CollectStatusEvent):
-        """Collect unit status."""
+        """Collect unit status.
+
+        The event handler runs after every juju event and sets the unit status.
+        """
         if not self.unit.is_leader():
             event.add_status(BlockedStatus("Scaling is not implemented for this charm"))
             return
@@ -69,9 +75,39 @@ class EupfOperatorCharm(ops.CharmBase):
 
 
     def _configure(self, _):
+        """Configure the eUPF Operator.
+
+        This event handler is the charm's central hook. It is triggered by any event
+        that affects the charm's state.
+
+        It install the eUPF snap and generate the configuration file.
+        """
         if not self.unit.is_leader():
             return
+        self._install_eupf_snap()
         self._generate_config_file()
+        self._start_eupf_service()
+
+    def _install_eupf_snap(self) -> None:
+        if self._eupf_snap_installed():
+            return
+        try:
+            snap_cache = SnapCache()
+            upf_snap = snap_cache[EUPF_SNAP_NAME]
+            upf_snap.ensure(
+                SnapState.Latest,
+                channel=EUPF_SNAP_CHANNEL,
+            )
+            upf_snap.hold()
+            logger.info("eUPF snap installed")
+        except SnapError as e:
+            logger.error("An exception occurred when installing the eUPF snap. Reason: %s", str(e))
+            raise e
+
+    def _eupf_snap_installed(self) -> bool:
+        snap_cache = SnapCache()
+        upf_snap = snap_cache[EUPF_SNAP_NAME]
+        return upf_snap.state == SnapState.Latest
 
     def _generate_config_file(self) -> None:
         content = render_upf_config_file(
@@ -85,19 +121,32 @@ class EupfOperatorCharm(ops.CharmBase):
             self._write_upf_config_file(content=content)
 
     def _upf_config_file_is_written(self) -> bool:
-        return self._machine.exists(path=f"{UPF_CONFIG_PATH}/{UPF_CONFIG_FILE_NAME}")
+        return self._machine.exists(path=f"{EUPF_CONFIG_PATH}/{EUPF_CONFIG_FILE_NAME}")
 
     def _upf_config_file_content_matches(self, content: str) -> bool:
-        existing_content = self._machine.pull(path=f"{UPF_CONFIG_PATH}/{UPF_CONFIG_FILE_NAME}")
+        existing_content = self._machine.pull(path=f"{EUPF_CONFIG_PATH}/{EUPF_CONFIG_FILE_NAME}")
         try:
             return yaml.safe_load(existing_content) == yaml.safe_load(content)
         except yaml.YAMLError:
             return False
 
     def _write_upf_config_file(self, content: str) -> None:
-        self._machine.push(path=f"{UPF_CONFIG_PATH}/{UPF_CONFIG_FILE_NAME}", source=content)
-        logger.info("Pushed %s config file", UPF_CONFIG_FILE_NAME)
+        self._machine.push(path=f"{EUPF_CONFIG_PATH}/{EUPF_CONFIG_FILE_NAME}", source=content)
+        logger.info("Pushed %s config file", EUPF_CONFIG_FILE_NAME)
 
+    def _start_eupf_service(self) -> None:
+        if self._eupf_service_started():
+            return
+        snap_cache = SnapCache()
+        eupf_snap = snap_cache[EUPF_SNAP_NAME]
+        eupf_snap.start(services=["eupf"])
+        logger.info("eUPF service started")
+
+    def _eupf_service_started(self) -> bool:
+        snap_cache = SnapCache()
+        eupf_snap = snap_cache[EUPF_SNAP_NAME]
+        upf_services = eupf_snap.services
+        return upf_services["eupf"]["active"]
 
 
 if __name__ == "__main__":  # pragma: nocover
