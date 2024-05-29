@@ -20,10 +20,9 @@ APP_NAME = METADATA["name"]
 async def test_deploy(ops_test: OpsTest, request):
 
     charm_path = Path(request.config.getoption("--charm_path")).resolve()
-    resources = {"httpbin-image": METADATA["resources"]["httpbin-image"]["upstream-source"]}
 
     await asyncio.gather(
-        ops_test.model.deploy(charm_path, resources=resources, application_name=APP_NAME),
+        ops_test.model.deploy(charm_path, application_name=APP_NAME),
         ops_test.model.wait_for_idle(
             apps=[APP_NAME], status="active", raise_on_blocked=True, timeout=1000
         ),
