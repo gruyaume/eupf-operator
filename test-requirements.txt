@@ -20,6 +20,8 @@ cffi==1.16.0
     #   pynacl
 charset-normalizer==3.3.2
     # via requests
+click==8.1.7
+    # via typer
 codespell==2.3.0
     # via -r test-requirements.in
 coverage[toml]==7.5.3
@@ -47,7 +49,9 @@ ipython==8.24.0
 jedi==0.19.1
     # via ipython
 jinja2==3.1.4
-    # via pytest-operator
+    # via
+    #   -c requirements.txt
+    #   pytest-operator
 juju==3.4.0.0
     # via
     #   -r test-requirements.in
@@ -57,17 +61,25 @@ kubernetes==29.0.0
 macaroonbakery==1.3.4
     # via juju
 markupsafe==2.1.5
-    # via jinja2
+    # via
+    #   -c requirements.txt
+    #   jinja2
 matplotlib-inline==0.1.7
     # via ipython
 mypy-extensions==1.0.0
     # via typing-inspect
-nodeenv==1.8.0
+nodeenv==1.9.0
     # via pyright
 oauthlib==3.2.2
     # via
     #   kubernetes
     #   requests-oauthlib
+ops==2.14.0
+    # via
+    #   -c requirements.txt
+    #   ops-scenario
+ops-scenario==6.0.5
+    # via pytest-interface-tester
 packaging==24.0
     # via
     #   juju
@@ -80,7 +92,7 @@ pexpect==4.9.0
     # via ipython
 pluggy==1.5.0
     # via pytest
-prompt-toolkit==3.0.44
+prompt-toolkit==3.0.45
     # via ipython
 protobuf==5.27.0
     # via macaroonbakery
@@ -97,6 +109,10 @@ pyasn1-modules==0.4.0
     # via google-auth
 pycparser==2.22
     # via cffi
+pydantic==1.10.15
+    # via
+    #   -c requirements.txt
+    #   pytest-interface-tester
 pygments==2.18.0
     # via ipython
 pymacaroons==0.13.0
@@ -116,9 +132,12 @@ pytest==8.2.1
     # via
     #   -r test-requirements.in
     #   pytest-asyncio
+    #   pytest-interface-tester
     #   pytest-operator
 pytest-asyncio==0.21.2
     # via pytest-operator
+pytest-interface-tester==2.0.1
+    # via -r test-requirements.in
 pytest-operator==0.35.0
     # via -r test-requirements.in
 python-dateutil==2.9.0.post0
@@ -127,10 +146,13 @@ pytz==2024.1
     # via pyrfc3339
 pyyaml==6.0.1
     # via
+    #   -c requirements.txt
     #   juju
     #   kubernetes
+    #   ops
+    #   ops-scenario
     #   pytest-operator
-requests==2.32.2
+requests==2.32.3
     # via
     #   hvac
     #   kubernetes
@@ -157,8 +179,13 @@ traitlets==5.14.3
     # via
     #   ipython
     #   matplotlib-inline
+typer==0.7.0
+    # via pytest-interface-tester
 typing-extensions==4.12.0
-    # via typing-inspect
+    # via
+    #   -c requirements.txt
+    #   pydantic
+    #   typing-inspect
 typing-inspect==0.9.0
     # via juju
 urllib3==2.2.1
@@ -168,9 +195,9 @@ urllib3==2.2.1
 wcwidth==0.2.13
     # via prompt-toolkit
 websocket-client==1.8.0
-    # via kubernetes
+    # via
+    #   -c requirements.txt
+    #   kubernetes
+    #   ops
 websockets==12.0
     # via juju
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools
