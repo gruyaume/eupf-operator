@@ -22,8 +22,12 @@ config:
   options:
     core-ip:
       type: string
-      default: 192.168.250.3/24
-      description: IP address used by the UPF's Access interface, in CIDR notation.
+      default: 192.168.250.3
+      description: IP address used by the UPF's Core interface.
+    access-ip:
+      type: string
+      default: 192.168.252.3
+      description: IP address used by the UPF's Access interface.
     external-upf-hostname:
       type: string
       description: |
