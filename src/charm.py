@@ -10,6 +10,7 @@ import logging
 import ops
 import yaml
 from charm_config import CharmConfig, CharmConfigInvalidError
+from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.operator_libs_linux.v2.snap import SnapCache, SnapError, SnapState
 from charms.sdcore_upf_k8s.v0.fiveg_n4 import N4Provides
 from jinja2 import Environment, FileSystemLoader
@@ -30,6 +31,7 @@ PFCP_IP = "127.0.0.1"
 PFCP_PORT = 8805
 N3_ADDRESS = "127.0.0.1"
 INTERFACE_NAME = "lo"
+PROMETHEUS_PORT = 9090
 
 
 logger = logging.getLogger(__name__)
@@ -38,6 +40,7 @@ def render_upf_config_file(
     pfcp_address: str,
     n3_address: str,
     interface_name: str,
+    metrics_port: int,
 ) -> str:
     """Render the configuration file for the 5G UPF service.
 
@@ -45,6 +48,7 @@ def render_upf_config_file(
         pfcp_address: The PFCP address.
         n3_address: The N3 address.
         interface_name: The interface name.
+        metrics_port: The port for the metrics.
     """
     jinja2_environment = Environment(loader=FileSystemLoader("src/templates/"))
     template = jinja2_environment.get_template(f"{EUPF_CONFIG_FILE_NAME}.j2")
@@ -52,6 +56,7 @@ def render_upf_config_file(
         pfcp_address=pfcp_address,
         n3_address=n3_address,
         interface_name=interface_name,
+        metrics_port=metrics_port,
     )
     return content
 
@@ -61,8 +66,16 @@ class EupfOperatorCharm(ops.CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self._machine = Machine()
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
+        self._machine = Machine()
+        self._cos_agent = COSAgentProvider(
+            self,
+            scrape_configs=[
+                {
+                    "static_configs": [{"targets": [f"*:{PROMETHEUS_PORT}"]}],
+                }
+            ],
+        )
         try:
             self._charm_config: CharmConfig = CharmConfig.from_charm(charm=self)
         except CharmConfigInvalidError:
@@ -124,6 +137,7 @@ class EupfOperatorCharm(ops.CharmBase):
             pfcp_address=PFCP_ADDRESS,
             n3_address=N3_ADDRESS,
             interface_name=INTERFACE_NAME,
+            metrics_port=PROMETHEUS_PORT,
         )
         if not self._upf_config_file_is_written() or not self._upf_config_file_content_matches(
             content=content
