@@ -9,7 +9,9 @@ import logging
 
 import ops
 import yaml
+from charm_config import CharmConfig, CharmConfigInvalidError
 from charms.operator_libs_linux.v2.snap import SnapCache, SnapError, SnapState
+from charms.sdcore_upf_k8s.v0.fiveg_n4 import N4Provides
 from jinja2 import Environment, FileSystemLoader
 from machine import Machine
 from ops import (
@@ -24,8 +26,11 @@ EUPF_SNAP_CHANNEL = "edge"
 EUPF_CONFIG_FILE_NAME = "config.yaml"
 EUPF_CONFIG_PATH = "/var/snap/eupf/common"
 PFCP_ADDRESS = "127.0.0.1:8805"
+PFCP_IP = "127.0.0.1"
+PFCP_PORT = 8805
 N3_ADDRESS = "127.0.0.1"
 INTERFACE_NAME = "lo"
+
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +63,11 @@ class EupfOperatorCharm(ops.CharmBase):
         super().__init__(*args)
         self._machine = Machine()
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
+        try:
+            self._charm_config: CharmConfig = CharmConfig.from_charm(charm=self)
+        except CharmConfigInvalidError:
+            return
+        self.fiveg_n4_provider = N4Provides(charm=self, relation_name="fiveg_n4")
         self.framework.observe(self.on.config_changed, self._configure)
 
     def _on_collect_status(self, event: CollectStatusEvent):
@@ -147,6 +157,33 @@ class EupfOperatorCharm(ops.CharmBase):
         eupf_snap = snap_cache[EUPF_SNAP_NAME]
         upf_services = eupf_snap.services
         return upf_services["eupf"]["active"]
+
+    def _update_fiveg_n4_relation_data(self) -> None:
+        """Publish UPF hostname and the N4 port in the `fiveg_n4` relation data bag."""
+        fiveg_n4_relations = self.model.relations.get("fiveg_n4")
+        if not fiveg_n4_relations:
+            logger.info("No `fiveg_n4` relations found.")
+            return
+        for fiveg_n4_relation in fiveg_n4_relations:
+            self.fiveg_n4_provider.publish_upf_n4_information(
+                relation_id=fiveg_n4_relation.id,
+                upf_hostname=self._get_n4_upf_hostname(),
+                upf_n4_port=PFCP_PORT,
+            )
+
+    def _get_n4_upf_hostname(self) -> str:
+        """Return the UPF hostname to be exposed over the `fiveg_n4` relation.
+
+        If a configuration is provided, it is returned. If that is
+        not available, returns the IP address of the core interface.
+
+        Returns:
+            str: Hostname of the UPF
+        """
+        if configured_hostname := self._charm_config.external_upf_hostname:
+            return configured_hostname
+        else:
+            return self._charm_config.core_ip
 
 
 if __name__ == "__main__":  # pragma: nocover

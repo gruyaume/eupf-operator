@@ -11,3 +11,19 @@ bases:
     run-on:
     - name: ubuntu
       channel: "22.04"
+
+provides:
+  fiveg_n4:
+    interface: fiveg_n4
+
+config:
+  options:
+    core-ip:
+      type: string
+      default: 192.168.250.3/24
+      description: IP address used by the UPF's Access interface, in CIDR notation.
+    external-upf-hostname:
+      type: string
+      description: |
+        Externally accessible FQDN for the UPF.
+        If not provided, it will default to the machine hostname.
