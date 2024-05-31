@@ -9,7 +9,7 @@ from ipaddress import ip_network
 from typing import Optional
 
 import ops
-from pydantic import (  # pylint: disable=no-name-in-module,import-error
+from pydantic import (
     BaseModel,
     StrictStr,
     ValidationError,
@@ -44,9 +44,10 @@ class UpfConfig(BaseModel):  # pylint: disable=too-few-public-methods
         alias_generator = to_kebab
 
     core_ip: str
+    access_ip: str
     external_upf_hostname: Optional[StrictStr]
 
-    @validator("core_ip")
+    @validator("core_ip", "access_ip")
     @classmethod
     def validate_ip_network_address(cls, value: str) -> str:
         """Validate that IP network address is valid."""
@@ -59,6 +60,7 @@ class CharmConfig:
     """Represent the configuration of the charm."""
 
     core_ip: StrictStr
+    access_ip: StrictStr
     external_upf_hostname: Optional[str]
 
     def __init__(self, *, upf_config: UpfConfig):
@@ -68,6 +70,7 @@ class CharmConfig:
             upf_config: UPF operator configuration.
         """
         self.core_ip = upf_config.core_ip
+        self.access_ip = upf_config.access_ip
         self.external_upf_hostname = upf_config.external_upf_hostname
 
     @classmethod

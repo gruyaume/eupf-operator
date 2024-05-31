@@ -26,12 +26,9 @@ EUPF_SNAP_NAME = "eupf"
 EUPF_SNAP_CHANNEL = "edge"
 EUPF_CONFIG_FILE_NAME = "config.yaml"
 EUPF_CONFIG_PATH = "/var/snap/eupf/common"
-PFCP_ADDRESS = "127.0.0.1:8805"
-PFCP_IP = "127.0.0.1"
 PFCP_PORT = 8805
-N3_ADDRESS = "127.0.0.1"
-INTERFACE_NAME = "lo"
 PROMETHEUS_PORT = 9090
+INTERFACE_NAME = "lo"
 
 
 logger = logging.getLogger(__name__)
@@ -107,11 +104,13 @@ class EupfOperatorCharm(ops.CharmBase):
         """
         if not self.unit.is_leader():
             return
-        self._install_eupf_snap()
+        self._snap_install_eupf()
+        self._snap_connect_process_control()
+        self._snap_connect_network_control()
         self._generate_config_file()
         self._start_eupf_service()
 
-    def _install_eupf_snap(self) -> None:
+    def _snap_install_eupf(self) -> None:
         if self._eupf_snap_installed():
             return
         try:
@@ -127,6 +126,18 @@ class EupfOperatorCharm(ops.CharmBase):
             logger.error("An exception occurred when installing the eUPF snap. Reason: %s", str(e))
             raise e
 
+    def _snap_connect_process_control(self):
+        snap_cache = SnapCache()
+        eupf_snap = snap_cache[EUPF_SNAP_NAME]
+        eupf_snap.connect(plug="process-control")
+        logger.info("Connected process-control interface to eUPF snap")
+
+    def _snap_connect_network_control(self):
+        snap_cache = SnapCache()
+        eupf_snap = snap_cache[EUPF_SNAP_NAME]
+        eupf_snap.connect(plug="network-control")
+        logger.info("Connected network-control interface to eUPF snap")
+
     def _eupf_snap_installed(self) -> bool:
         snap_cache = SnapCache()
         upf_snap = snap_cache[EUPF_SNAP_NAME]
@@ -134,8 +145,8 @@ class EupfOperatorCharm(ops.CharmBase):
 
     def _generate_config_file(self) -> None:
         content = render_upf_config_file(
-            pfcp_address=PFCP_ADDRESS,
-            n3_address=N3_ADDRESS,
+            pfcp_address=f"{self._charm_config.core_ip}:{PFCP_PORT}",
+            n3_address=self._charm_config.access_ip,
             interface_name=INTERFACE_NAME,
             metrics_port=PROMETHEUS_PORT,
         )
