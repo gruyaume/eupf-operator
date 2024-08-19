@@ -2,4 +2,4 @@ cosl
 ops
 jinja2
 pyyaml
-pydantic<2
+pydantic<3
