@@ -4,26 +4,35 @@
 #
 #    pip-compile requirements.in
 #
-cosl==0.0.11
+annotated-types==0.7.0
+    # via pydantic
+cosl==0.0.23
     # via -r requirements.in
 jinja2==3.1.4
     # via -r requirements.in
 markupsafe==2.1.5
     # via jinja2
-ops==2.14.0
+ops==2.15.0
     # via
     #   -r requirements.in
     #   cosl
-pydantic==1.10.15
-    # via -r requirements.in
-pyyaml==6.0.1
+pydantic==2.8.2
+    # via
+    #   -r requirements.in
+    #   cosl
+pydantic-core==2.20.1
+    # via pydantic
+pyyaml==6.0.2
     # via
     #   -r requirements.in
     #   cosl
     #   ops
+tenacity==9.0.0
+    # via cosl
 typing-extensions==4.12.0
     # via
     #   cosl
     #   pydantic
+    #   pydantic-core
 websocket-client==1.8.0
     # via ops
